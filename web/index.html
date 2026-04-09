@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Music Explorer</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            height: 100vh;
+            gap: 0;
+        }
+        #plot3d {
+            width: 100%;
+            height: 100vh;
+        }
+        .sidebar {
+            background: #111118;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid #222;
+        }
+        h1 {
+            font-size: 18px;
+            margin-bottom: 4px;
+            color: #fff;
+        }
+        .subtitle {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+        .slider-group {
+            margin-bottom: 18px;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .slider-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #ccc;
+        }
+        .slider-value {
+            font-size: 12px;
+            color: #888;
+            font-family: monospace;
+        }
+        .slider-range {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #555;
+            margin-top: 2px;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #222;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #slider-x::-webkit-slider-thumb { background: #ff6b6b; }
+        #slider-y::-webkit-slider-thumb { background: #51cf66; }
+        #slider-z::-webkit-slider-thumb { background: #339af0; }
+        .results {
+            margin-top: 16px;
+            border-top: 1px solid #222;
+            padding-top: 12px;
+        }
+        .results h3 {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .track {
+            background: #1a1a24;
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-left: 3px solid #333;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .track:hover {
+            background: #222230;
+        }
+        .track-id {
+            font-size: 11px;
+            color: #666;
+            font-family: monospace;
+        }
+        .track-genre {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .track-pos {
+            font-size: 10px;
+            color: #555;
+            margin-top: 2px;
+        }
+        .track-dist {
+            font-size: 10px;
+            color: #888;
+            float: right;
+        }
+        .stats {
+            font-size: 11px;
+            color: #555;
+            margin-top: 12px;
+            text-align: center;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-size: 16px;
+            color: #666;
+        }
+        .genre-colors {
+            margin-top: 12px;
+            border-top: 1px solid #222;
+            padding-top: 10px;
+        }
+        .genre-colors h3 {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .genre-tag {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 1px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.15s;
+        }
+        .genre-tag:hover { opacity: 1; }
+        .cursor-marker {
+            font-size: 12px;
+            color: #ffd43b;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #1a1a10;
+            border-radius: 6px;
+            border: 1px solid #332;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="plot3d">
+            <div class="loading" id="loading">Loading 49,598 tracks...</div>
+        </div>
+        <div class="sidebar">
+            <h1>3D Music Explorer</h1>
+            <p class="subtitle">슬라이더를 조절하여 원하는 음악을 탐색하세요</p>
+
+            <div class="cursor-marker" id="cursor-info">
+                🎯 슬라이더를 움직여 탐색 시작
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span class="slider-name" style="color:#ff6b6b">Brightness / Energy</span>
+                    <span class="slider-value" id="val-x">50</span>
+                </div>
+                <input type="range" id="slider-x" min="0" max="100" value="50">
+                <div class="slider-range">
+                    <span>← Dark / Muted</span>
+                    <span>Bright / Sharp →</span>
+                </div>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span class="slider-name" style="color:#51cf66">Intensity / Loudness</span>
+                    <span class="slider-value" id="val-y">50</span>
+                </div>
+                <input type="range" id="slider-y" min="0" max="100" value="50">
+                <div class="slider-range">
+                    <span>← Quiet / Soft</span>
+                    <span>Loud / Intense →</span>
+                </div>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span class="slider-name" style="color:#339af0">Harmonic Complexity</span>
+                    <span class="slider-value" id="val-z">50</span>
+                </div>
+                <input type="range" id="slider-z" min="0" max="100" value="50">
+                <div class="slider-range">
+                    <span>← Simple</span>
+                    <span>Complex →</span>
+                </div>
+            </div>
+
+            <div class="results" id="results">
+                <h3>Nearest Tracks (k=10)</h3>
+                <div id="track-list"></div>
+            </div>
+
+            <div class="genre-colors" id="genre-legend"></div>
+
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <script>
+    const GENRE_COLORS = {
+        'Blues': '#1f77b4', 'Classical': '#ff7f0e', 'Country': '#2ca02c',
+        'Easy Listening': '#d62728', 'Electronic': '#9467bd', 'Experimental': '#8c564b',
+        'Folk': '#e377c2', 'Hip-Hop': '#7f7f7f', 'Instrumental': '#bcbd22',
+        'International': '#17becf', 'Jazz': '#aec7e8', 'Old-Time / Historic': '#ffbb78',
+        'Pop': '#98df8a', 'Rock': '#ff9896', 'Soul-RnB': '#c5b0d5', 'Spoken': '#c49c94'
+    };
+
+    let DATA = null;
+    let plotDiv = null;
+
+    async function loadData() {
+        const resp = await fetch('music_data.json');
+        DATA = await resp.json();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('stats').textContent =
+            `${DATA.stats.total_tracks.toLocaleString()} tracks · ${DATA.stats.variance_explained}% variance explained`;
+        initPlot();
+        buildGenreLegend();
+        updateResults();
+    }
+
+    function initPlot() {
+        plotDiv = document.getElementById('plot3d');
+
+        // Group tracks by genre for coloring
+        const traces = [];
+        for (const genre of DATA.genres) {
+            const genreTracks = DATA.tracks.filter(t => t.genre === genre);
+            if (genreTracks.length < 10) continue;
+
+            traces.push({
+                x: genreTracks.map(t => t.x),
+                y: genreTracks.map(t => t.y),
+                z: genreTracks.map(t => t.z),
+                mode: 'markers',
+                type: 'scatter3d',
+                name: genre,
+                text: genreTracks.map(t => `Track ${t.id}<br>Genre: ${t.genre}`),
+                marker: {
+                    size: 1.5,
+                    color: GENRE_COLORS[genre] || '#888',
+                    opacity: 0.3,
+                },
+                hoverinfo: 'text',
+            });
+        }
+
+        // Cursor marker (starts at center)
+        traces.push({
+            x: [50], y: [50], z: [50],
+            mode: 'markers',
+            type: 'scatter3d',
+            name: '🎯 Your Position',
+            marker: { size: 10, color: '#ffd43b', symbol: 'diamond', opacity: 1 },
+            hoverinfo: 'name',
+        });
+
+        const layout = {
+            paper_bgcolor: '#0a0a0f',
+            plot_bgcolor: '#0a0a0f',
+            font: { color: '#888', size: 10 },
+            margin: { l: 0, r: 0, t: 0, b: 0 },
+            scene: {
+                xaxis: { title: 'Brightness', color: '#ff6b6b', gridcolor: '#1a1a24', zerolinecolor: '#333' },
+                yaxis: { title: 'Intensity', color: '#51cf66', gridcolor: '#1a1a24', zerolinecolor: '#333' },
+                zaxis: { title: 'Harmony', color: '#339af0', gridcolor: '#1a1a24', zerolinecolor: '#333' },
+                bgcolor: '#0a0a0f',
+            },
+            showlegend: false,
+        };
+
+        Plotly.newPlot(plotDiv, traces, layout, { responsive: true, displayModeBar: false });
+    }
+
+    function updateCursor(x, y, z) {
+        if (!plotDiv) return;
+        const traceCount = plotDiv.data.length;
+        Plotly.restyle(plotDiv, { x: [[x]], y: [[y]], z: [[z]] }, [traceCount - 1]);
+    }
+
+    function findNearest(x, y, z, k = 10) {
+        const distances = DATA.tracks.map((t, i) => ({
+            idx: i,
+            dist: Math.sqrt((t.x - x) ** 2 + (t.y - y) ** 2 + (t.z - z) ** 2),
+            ...t
+        }));
+        distances.sort((a, b) => a.dist - b.dist);
+        return distances.slice(0, k);
+    }
+
+    function updateResults() {
+        const x = parseFloat(document.getElementById('slider-x').value);
+        const y = parseFloat(document.getElementById('slider-y').value);
+        const z = parseFloat(document.getElementById('slider-z').value);
+
+        document.getElementById('val-x').textContent = x;
+        document.getElementById('val-y').textContent = y;
+        document.getElementById('val-z').textContent = z;
+
+        const bLabel = x < 40 ? 'Dark' : x > 60 ? 'Bright' : 'Neutral';
+        const iLabel = y < 40 ? 'Quiet' : y > 60 ? 'Loud' : 'Moderate';
+        const hLabel = z < 40 ? 'Simple' : z > 60 ? 'Complex' : 'Balanced';
+        document.getElementById('cursor-info').textContent =
+            `🎯 ${bLabel} · ${iLabel} · ${hLabel}`;
+
+        updateCursor(x, y, z);
+
+        const nearest = findNearest(x, y, z);
+        const listEl = document.getElementById('track-list');
+
+        // Count genres in results
+        const genreCounts = {};
+        nearest.forEach(t => { genreCounts[t.genre] = (genreCounts[t.genre] || 0) + 1; });
+
+        listEl.innerHTML = nearest.map((t, i) => `
+            <div class="track" style="border-left-color: ${GENRE_COLORS[t.genre] || '#333'}">
+                <span class="track-dist">${t.dist.toFixed(1)}</span>
+                <span class="track-genre" style="color: ${GENRE_COLORS[t.genre]}">${t.genre}</span>
+                <span class="track-id"> · Track ${t.id}</span>
+                <div class="track-pos">B:${t.x.toFixed(0)} I:${t.y.toFixed(0)} H:${t.z.toFixed(0)}</div>
+            </div>
+        `).join('');
+    }
+
+    function buildGenreLegend() {
+        const el = document.getElementById('genre-legend');
+        el.innerHTML = '<h3>Genres</h3>' + DATA.genres
+            .filter(g => DATA.tracks.filter(t => t.genre === g).length >= 10)
+            .map(g => `<span class="genre-tag" style="background:${GENRE_COLORS[g]}22;color:${GENRE_COLORS[g]}">${g}</span>`)
+            .join('');
+    }
+
+    // Slider events
+    ['slider-x', 'slider-y', 'slider-z'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateResults);
+    });
+
+    loadData();
+    </script>
+</body>
+</html>
