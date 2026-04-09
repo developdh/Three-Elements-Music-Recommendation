@@ -1,0 +1,9 @@
+data/
+output/
+__pycache__/
+*.pyc
+.omc/
+.env
+*.egg-info/
+dist/
+build/
