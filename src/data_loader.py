@@ -1,7 +1,6 @@
 """FMA dataset loading and preprocessing."""
 
 import pandas as pd
-import numpy as np
 from config import FEATURES_CSV, TRACKS_CSV, NAN_ROW_THRESHOLD
 
 
