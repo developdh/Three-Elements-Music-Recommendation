@@ -10,7 +10,7 @@ from config import N_COMPONENTS, VARIANCE_THRESHOLD, N_TOP_FEATURES
 def run_pca(features_df):
     """Standardize features and run PCA with all components.
 
-    Returns: (pca, scaled_data, feature_names)
+    Returns: (pca, scaler, scaled_data, feature_names)
     """
     feature_names = features_df.columns.tolist()
 
@@ -20,7 +20,7 @@ def run_pca(features_df):
     pca = PCA(n_components=None)
     pca.fit(scaled)
 
-    return pca, scaled, feature_names
+    return pca, scaler, scaled, feature_names
 
 
 def get_variance_analysis(pca):

@@ -28,7 +28,7 @@ mkdir -p data/fma_metadata
 ## Run
 
 ```bash
-python src/main.py
+python3 src/main.py
 ```
 
 ## Output

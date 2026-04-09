@@ -87,7 +87,7 @@ def main():
 
     # Step 2: Run PCA
     print_section("Running PCA")
-    pca, scaled_data, feature_names = run_pca(features_df)
+    pca, scaler, scaled_data, feature_names = run_pca(features_df)
     variance = get_variance_analysis(pca)
     print_variance_results(variance)
 
@@ -104,7 +104,7 @@ def main():
 
     # Step 5: k-NN overlap evaluation
     print_section("Running k-NN Overlap Evaluation")
-    knn = compute_knn_overlap(features_df.values, projected, genres)
+    knn = compute_knn_overlap(scaled_data, projected, genres)
     print_knn_results(knn)
 
     # Step 6: Conclusion

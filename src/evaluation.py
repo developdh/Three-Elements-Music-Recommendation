@@ -2,21 +2,22 @@
 
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import StandardScaler
 from config import K_NEIGHBORS, KNN_OVERLAP_THRESHOLD
 
 
-def compute_knn_overlap(full_features, reduced_features, genres):
+def compute_knn_overlap(full_scaled, reduced_features, genres):
     """Compare k-NN neighbors in full feature space vs reduced (3-PC) space.
+
+    Args:
+        full_scaled: Already-scaled full feature matrix (same scaler used for PCA)
+        reduced_features: PCA-projected data (N x n_components)
+        genres: genre labels Series
 
     Returns dict with:
         - overall_overlap: mean overlap ratio across all tracks
         - per_genre_overlap: {genre: mean_overlap}
         - is_sufficient: whether overall overlap >= threshold
     """
-    # k-NN in full feature space (already scaled)
-    scaler = StandardScaler()
-    full_scaled = scaler.fit_transform(full_features)
 
     knn_full = NearestNeighbors(n_neighbors=K_NEIGHBORS + 1, metric='euclidean')
     knn_full.fit(full_scaled)
@@ -32,7 +33,7 @@ def compute_knn_overlap(full_features, reduced_features, genres):
 
     # Compute overlap per track
     overlaps = []
-    for i in range(len(full_features)):
+    for i in range(len(full_scaled)):
         full_set = set(indices_full[i])
         reduced_set = set(indices_reduced[i])
         overlap = len(full_set & reduced_set) / K_NEIGHBORS
