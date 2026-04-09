@@ -58,6 +58,26 @@ FMA 데이터셋(49,598곡, 518개 오디오 피처)에 PCA를 적용하여 3개
 3. 장르 레이블과 자연 클러스터의 상관관계는 **거의 없다** (ARI = 0.037)
 4. **장르 기반 분류는 음향적 유사성과 맞지 않으며**, 연속적 음향 특성 공간이 더 적절하다
 
+### Experiment V4: 클러스터 수를 늘려도 장르보다 나은가?
+
+> `python3 src/experiment_v4.py`
+
+k=2가 너무 단순할 수 있으므로, k=2~10까지 늘려가며 장르 대비 우위가 유지되는지 검증.
+
+| k | Silhouette | k-NN Purity | vs Genre Sil | vs Genre Purity |
+|---|-----------|-------------|-------------|----------------|
+| 2 | +0.247 | 97.7% | **+0.435** | **+72.8%p** |
+| 3 | +0.237 | 96.3% | **+0.425** | **+71.4%p** |
+| 5 | +0.217 | 88.5% | **+0.405** | **+63.6%p** |
+| 10 | +0.135 | 70.2% | **+0.323** | **+45.3%p** |
+| Genre (16) | -0.188 | 24.9% | baseline | baseline |
+
+**핵심 결론:**
+- **k=2~10 모두** 장르보다 우수 — 클러스터 우위가 모든 세분화 수준에서 유지됨
+- k=10에서도 silhouette +0.135 vs 장르 -0.188 → **여전히 압도적**
+- 클러스터-장르 상관관계(ARI)는 0.04~0.06으로 **k에 상관없이 거의 무관**
+- 이는 장르와 음향 유사성이 근본적으로 다른 축임을 확증
+
 ## Setup
 
 ```bash
@@ -88,6 +108,9 @@ python3 src/experiment_v2.py
 
 # V3: 비지도 클러스터링 (자연 음악 그룹 발견)
 python3 src/experiment_v3.py
+
+# V4: 클러스터 확장성 검증 (k=2~10 vs 장르)
+python3 src/experiment_v4.py
 ```
 
 ## Output
@@ -105,6 +128,10 @@ python3 src/experiment_v3.py
 - `output/v3_clusters_vs_genres.png` — 자연 클러스터 vs 장르 3D 비교
 - `output/v3_cluster_profiles.png` — 클러스터별 음향 특성 프로필
 
+### V4 (`src/experiment_v4.py`)
+- `output/v4_scalability.png` — k=2~10 Silhouette/Purity/ARI 비교 (vs 장르 baseline)
+- `output/v4_clusters_k{N}.png` — 최적 k의 3D 클러스터 분포
+
 ## Project Structure
 
 ```
@@ -116,6 +143,7 @@ Three-Elements-Music-Recommendation/
 │   ├── main.py                # V1: PCA 분석
 │   ├── experiment_v2.py       # V2: 피처 엔지니어링 비교
 │   ├── experiment_v3.py       # V3: 비지도 클러스터링
+│   ├── experiment_v4.py       # V4: 클러스터 확장성 검증
 │   ├── data_loader.py         # FMA 데이터 로드/전처리
 │   ├── pca_analysis.py        # PCA 분석 모듈
 │   ├── visualization.py       # 시각화 모듈
