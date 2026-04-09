@@ -169,6 +169,13 @@ python3 src/experiment_v4.py
 
 # V5: 추천 시스템 비교 (3축 vs 장르 vs Oracle)
 python3 src/experiment_v5.py
+
+# V6: 3D 탐색형 공간 검증
+python3 src/experiment_v6.py
+
+# Web Prototype: 3D Music Explorer
+python3 src/build_web_data.py          # 데이터 내보내기
+cd web && python3 -m http.server 8080  # http://localhost:8080
 ```
 
 ## Output
@@ -212,6 +219,10 @@ Three-Elements-Music-Recommendation/
 │   ├── experiment_v4.py       # V4: 클러스터 확장성 검증
 │   ├── experiment_v5.py       # V5: 추천 시스템 성능 비교
 │   ├── experiment_v6.py       # V6: 3D 탐색형 공간 실현 가능성
+│   └── build_web_data.py      # 웹 프로토타입용 데이터 내보내기
+├── web/
+│   ├── index.html             # 3D Music Explorer 웹 프로토타입
+│   └── music_data.json        # PCA 좌표 + 메타데이터 (3.4MB)
 │   ├── data_loader.py         # FMA 데이터 로드/전처리
 │   ├── pca_analysis.py        # PCA 분석 모듈
 │   ├── visualization.py       # 시각화 모듈
