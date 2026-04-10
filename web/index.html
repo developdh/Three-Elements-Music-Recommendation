@@ -16,7 +16,7 @@
         }
         .container {
             display: grid;
-            grid-template-columns: 1fr 340px;
+            grid-template-columns: 1fr 360px;
             height: 100vh;
             gap: 0;
         }
@@ -41,7 +41,7 @@
             margin-bottom: 20px;
         }
         .slider-group {
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
         .slider-label {
             display: flex;
@@ -84,15 +84,68 @@
         #slider-x::-webkit-slider-thumb { background: #ff6b6b; }
         #slider-y::-webkit-slider-thumb { background: #51cf66; }
         #slider-z::-webkit-slider-thumb { background: #339af0; }
+
+        /* Density histogram bar under slider */
+        .density-bar {
+            display: flex;
+            height: 18px;
+            gap: 1px;
+            margin-top: 4px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .density-bin {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+        }
+        .density-fill {
+            width: 100%;
+            border-radius: 1px;
+            transition: opacity 0.15s;
+        }
+        .density-bin.active .density-fill {
+            box-shadow: 0 0 4px rgba(255,255,255,0.3);
+        }
+        .density-bin-label {
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            color: #444;
+            display: none;
+        }
+        .density-bin.active .density-bin-label {
+            display: block;
+            color: #999;
+        }
+
+        /* Nearby count badge */
+        .nearby-badge {
+            display: inline-block;
+            font-size: 11px;
+            color: #aaa;
+            background: #1a1a24;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
+
         .results {
             margin-top: 16px;
             border-top: 1px solid #222;
             padding-top: 12px;
         }
-        .results h3 {
+        .results-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .results-header h3 {
             font-size: 13px;
             color: #888;
-            margin-bottom: 8px;
         }
         .track {
             background: #1a1a24;
@@ -163,11 +216,30 @@
         .cursor-marker {
             font-size: 12px;
             color: #ffd43b;
-            margin-bottom: 12px;
-            padding: 8px;
+            margin-bottom: 14px;
+            padding: 8px 10px;
             background: #1a1a10;
             border-radius: 6px;
             border: 1px solid #332;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cursor-label { }
+        .cursor-density {
+            font-size: 11px;
+            color: #8b8;
+            font-family: monospace;
+        }
+
+        /* Uniform density indicator */
+        .density-note {
+            font-size: 10px;
+            color: #555;
+            text-align: center;
+            margin-top: 4px;
+            margin-bottom: 4px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -181,7 +253,8 @@
             <p class="subtitle">슬라이더를 조절하여 원하는 음악을 탐색하세요</p>
 
             <div class="cursor-marker" id="cursor-info">
-                🎯 슬라이더를 움직여 탐색 시작
+                <span class="cursor-label">🎯 슬라이더를 움직여 탐색 시작</span>
+                <span class="cursor-density" id="cursor-density"></span>
             </div>
 
             <div class="slider-group">
@@ -190,7 +263,8 @@
                     <span class="slider-value" id="val-x">50</span>
                 </div>
                 <input type="range" id="slider-x" min="0" max="100" value="50">
-                <div class="slider-range">
+                <div class="density-bar" id="density-x"></div>
+                <div class="slider-range" style="margin-top:14px">
                     <span>← Dark / Muted</span>
                     <span>Bright / Sharp →</span>
                 </div>
@@ -202,7 +276,8 @@
                     <span class="slider-value" id="val-y">50</span>
                 </div>
                 <input type="range" id="slider-y" min="0" max="100" value="50">
-                <div class="slider-range">
+                <div class="density-bar" id="density-y"></div>
+                <div class="slider-range" style="margin-top:14px">
                     <span>← Quiet / Soft</span>
                     <span>Loud / Intense →</span>
                 </div>
@@ -214,14 +289,20 @@
                     <span class="slider-value" id="val-z">50</span>
                 </div>
                 <input type="range" id="slider-z" min="0" max="100" value="50">
-                <div class="slider-range">
+                <div class="density-bar" id="density-z"></div>
+                <div class="slider-range" style="margin-top:14px">
                     <span>← Simple</span>
                     <span>Complex →</span>
                 </div>
             </div>
 
+            <p class="density-note">각 구간에 동일한 수의 곡이 분포 (Quantile Normalization)</p>
+
             <div class="results" id="results">
-                <h3>Nearest Tracks (k=10)</h3>
+                <div class="results-header">
+                    <h3>Nearest Tracks</h3>
+                    <span class="nearby-badge" id="nearby-count">...</span>
+                </div>
                 <div id="track-list"></div>
             </div>
 
@@ -240,8 +321,12 @@
         'Pop': '#98df8a', 'Rock': '#ff9896', 'Soul-RnB': '#c5b0d5', 'Spoken': '#c49c94'
     };
 
+    const N_BINS = 20;
+    const NEARBY_RADIUS = 5; // radius for counting nearby tracks
+
     let DATA = null;
     let plotDiv = null;
+    let densityData = { x: [], y: [], z: [] };
 
     async function loadData() {
         const resp = await fetch('music_data.json');
@@ -249,15 +334,81 @@
         document.getElementById('loading').style.display = 'none';
         document.getElementById('stats').textContent =
             `${DATA.stats.total_tracks.toLocaleString()} tracks · ${DATA.stats.variance_explained}% variance explained`;
+
+        computeDensity();
         initPlot();
+        buildDensityBars();
         buildGenreLegend();
         updateResults();
+    }
+
+    function computeDensity() {
+        // Compute histogram for each axis
+        for (const [axis, key] of [['x', 'x'], ['y', 'y'], ['z', 'z']]) {
+            const bins = new Array(N_BINS).fill(0);
+            const genreBins = new Array(N_BINS).fill(null).map(() => ({}));
+            const binSize = 100 / N_BINS;
+
+            DATA.tracks.forEach(t => {
+                const b = Math.min(Math.floor(t[key] / binSize), N_BINS - 1);
+                bins[b]++;
+                genreBins[b][t.genre] = (genreBins[b][t.genre] || 0) + 1;
+            });
+
+            densityData[axis] = { bins, genreBins, max: Math.max(...bins) };
+        }
+    }
+
+    function buildDensityBars() {
+        const axisColors = { x: '#ff6b6b', y: '#51cf66', z: '#339af0' };
+
+        for (const axis of ['x', 'y', 'z']) {
+            const el = document.getElementById(`density-${axis}`);
+            const { bins, max } = densityData[axis];
+            const color = axisColors[axis];
+
+            el.innerHTML = bins.map((count, i) => {
+                const height = Math.max(2, (count / max) * 18);
+                const pct = (count / DATA.tracks.length * 100).toFixed(1);
+                return `<div class="density-bin" data-bin="${i}">
+                    <div class="density-fill" style="height:${height}px;background:${color};opacity:0.4"></div>
+                    <span class="density-bin-label">${pct}%</span>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    function updateDensityHighlight(axis, value) {
+        const binSize = 100 / N_BINS;
+        const activeBin = Math.min(Math.floor(value / binSize), N_BINS - 1);
+        const el = document.getElementById(`density-${axis}`);
+        const bins = el.querySelectorAll('.density-bin');
+
+        bins.forEach((bin, i) => {
+            const fill = bin.querySelector('.density-fill');
+            if (i === activeBin) {
+                bin.classList.add('active');
+                fill.style.opacity = '1';
+            } else {
+                bin.classList.remove('active');
+                const dist = Math.abs(i - activeBin);
+                fill.style.opacity = Math.max(0.15, 0.6 - dist * 0.05).toFixed(2);
+            }
+        });
+    }
+
+    function countNearby(x, y, z, radius) {
+        let count = 0;
+        for (const t of DATA.tracks) {
+            const d = Math.sqrt((t.x - x) ** 2 + (t.y - y) ** 2 + (t.z - z) ** 2);
+            if (d <= radius) count++;
+        }
+        return count;
     }
 
     function initPlot() {
         plotDiv = document.getElementById('plot3d');
 
-        // Group tracks by genre for coloring
         const traces = [];
         for (const genre of DATA.genres) {
             const genreTracks = DATA.tracks.filter(t => t.genre === genre);
@@ -280,7 +431,7 @@
             });
         }
 
-        // Cursor marker (starts at center)
+        // Cursor marker
         traces.push({
             x: [50], y: [50], z: [50],
             mode: 'markers',
@@ -332,29 +483,47 @@
         document.getElementById('val-y').textContent = y;
         document.getElementById('val-z').textContent = z;
 
-        const bLabel = x < 40 ? 'Dark' : x > 60 ? 'Bright' : 'Neutral';
-        const iLabel = y < 40 ? 'Quiet' : y > 60 ? 'Loud' : 'Moderate';
-        const hLabel = z < 40 ? 'Simple' : z > 60 ? 'Complex' : 'Balanced';
-        document.getElementById('cursor-info').textContent =
+        // Update density highlights
+        updateDensityHighlight('x', x);
+        updateDensityHighlight('y', y);
+        updateDensityHighlight('z', z);
+
+        // Cursor description
+        const bLabel = x < 33 ? 'Dark' : x > 66 ? 'Bright' : 'Neutral';
+        const iLabel = y < 33 ? 'Quiet' : y > 66 ? 'Loud' : 'Moderate';
+        const hLabel = z < 33 ? 'Simple' : z > 66 ? 'Complex' : 'Balanced';
+        document.querySelector('.cursor-label').textContent =
             `🎯 ${bLabel} · ${iLabel} · ${hLabel}`;
+
+        // Count nearby tracks
+        const nearby = countNearby(x, y, z, NEARBY_RADIUS);
+        document.getElementById('cursor-density').textContent = `${nearby} tracks nearby`;
 
         updateCursor(x, y, z);
 
         const nearest = findNearest(x, y, z);
         const listEl = document.getElementById('track-list');
 
-        // Count genres in results
-        const genreCounts = {};
-        nearest.forEach(t => { genreCounts[t.genre] = (genreCounts[t.genre] || 0) + 1; });
+        // Nearby count badge
+        document.getElementById('nearby-count').textContent =
+            `r=${NEARBY_RADIUS} → ${nearby} tracks`;
 
         listEl.innerHTML = nearest.map((t, i) => `
-            <div class="track" style="border-left-color: ${GENRE_COLORS[t.genre] || '#333'}">
-                <span class="track-dist">${t.dist.toFixed(1)}</span>
+            <div class="track" style="border-left-color: ${GENRE_COLORS[t.genre] || '#333'}"
+                 onclick="jumpTo(${t.x}, ${t.y}, ${t.z})">
+                <span class="track-dist">d=${t.dist.toFixed(1)}</span>
                 <span class="track-genre" style="color: ${GENRE_COLORS[t.genre]}">${t.genre}</span>
                 <span class="track-id"> · Track ${t.id}</span>
                 <div class="track-pos">B:${t.x.toFixed(0)} I:${t.y.toFixed(0)} H:${t.z.toFixed(0)}</div>
             </div>
         `).join('');
+    }
+
+    function jumpTo(x, y, z) {
+        document.getElementById('slider-x').value = Math.round(x);
+        document.getElementById('slider-y').value = Math.round(y);
+        document.getElementById('slider-z').value = Math.round(z);
+        updateResults();
     }
 
     function buildGenreLegend() {
