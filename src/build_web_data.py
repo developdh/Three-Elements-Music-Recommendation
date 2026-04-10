@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import json
 import numpy as np
 import pandas as pd
+from scipy.stats import rankdata
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
@@ -40,10 +41,13 @@ def main():
     pca = PCA(n_components=3)
     pca_3d = pca.fit_transform(agg_scaled)
 
-    # Normalize to 0-100 range for easier slider mapping
-    mins = pca_3d.min(axis=0)
-    maxs = pca_3d.max(axis=0)
-    normalized = (pca_3d - mins) / (maxs - mins) * 100
+    # Quantile normalization: each axis gets uniform distribution 0-100
+    # This ensures slider movement always covers equal density of tracks
+    # (vs min-max which clusters everything in the center)
+    normalized = np.zeros_like(pca_3d)
+    for axis in range(3):
+        ranks = rankdata(pca_3d[:, axis], method='average')
+        normalized[:, axis] = (ranks - 1) / (len(ranks) - 1) * 100
 
     # Build track data
     tracks = []
