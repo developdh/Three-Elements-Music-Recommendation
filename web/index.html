@@ -414,18 +414,23 @@
             const genreTracks = DATA.tracks.filter(t => t.genre === genre);
             if (genreTracks.length < 10) continue;
 
+            // Subsample for performance + visual clarity
+            const sampled = genreTracks.length > 800
+                ? genreTracks.filter((_, i) => i % Math.ceil(genreTracks.length / 800) === 0)
+                : genreTracks;
+
             traces.push({
-                x: genreTracks.map(t => t.x),
-                y: genreTracks.map(t => t.y),
-                z: genreTracks.map(t => t.z),
+                x: sampled.map(t => t.x),
+                y: sampled.map(t => t.y),
+                z: sampled.map(t => t.z),
                 mode: 'markers',
                 type: 'scatter3d',
-                name: genre,
-                text: genreTracks.map(t => `Track ${t.id}<br>Genre: ${t.genre}`),
+                name: `${genre} (${genreTracks.length})`,
+                text: sampled.map(t => `Track ${t.id}<br>Genre: ${t.genre}`),
                 marker: {
-                    size: 1.5,
+                    size: 2.2,
                     color: GENRE_COLORS[genre] || '#888',
-                    opacity: 0.3,
+                    opacity: 0.7,
                 },
                 hoverinfo: 'text',
             });
@@ -447,10 +452,11 @@
             font: { color: '#888', size: 10 },
             margin: { l: 0, r: 0, t: 0, b: 0 },
             scene: {
-                xaxis: { title: 'Brightness', color: '#ff6b6b', gridcolor: '#1a1a24', zerolinecolor: '#333' },
-                yaxis: { title: 'Intensity', color: '#51cf66', gridcolor: '#1a1a24', zerolinecolor: '#333' },
-                zaxis: { title: 'Harmony', color: '#339af0', gridcolor: '#1a1a24', zerolinecolor: '#333' },
+                xaxis: { title: 'Brightness', color: '#ff6b6b', gridcolor: '#1a1a24', zerolinecolor: '#333', range: [0, 100] },
+                yaxis: { title: 'Intensity', color: '#51cf66', gridcolor: '#1a1a24', zerolinecolor: '#333', range: [0, 100] },
+                zaxis: { title: 'Harmony', color: '#339af0', gridcolor: '#1a1a24', zerolinecolor: '#333', range: [0, 100] },
                 bgcolor: '#0a0a0f',
+                aspectmode: 'cube',
             },
             showlegend: false,
         };
