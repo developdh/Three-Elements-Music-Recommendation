@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood Music · 기분으로 찾는 음악</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0f14;
+            --surface: #1a1a23;
+            --surface-2: #232330;
+            --border: #2a2a38;
+            --text: #f0f0f5;
+            --muted: #888;
+            --accent-1: #ff6b9d;
+            --accent-2: #ffd93d;
+            --accent-3: #6bcbef;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px 16px;
+            -webkit-font-smoothing: antialiased;
+        }
+        .app {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .mood-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 24px 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        .mood-summary {
+            text-align: center;
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 22px;
+            min-height: 24px;
+            letter-spacing: -0.01em;
+        }
+        .mood-summary .accent {
+            color: var(--accent-2);
+        }
+
+        .slider-row {
+            margin-bottom: 18px;
+        }
+        .slider-row:last-child { margin-bottom: 0; }
+        .slider-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .slider-icon {
+            font-size: 16px;
+            width: 22px;
+            text-align: center;
+        }
+        .slider-ends {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--surface-2);
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid var(--bg);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid var(--bg);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        #s-bright::-webkit-slider-thumb { background: var(--accent-1); }
+        #s-intense::-webkit-slider-thumb { background: var(--accent-2); }
+        #s-complex::-webkit-slider-thumb { background: var(--accent-3); }
+        #s-bright::-moz-range-thumb { background: var(--accent-1); }
+        #s-intense::-moz-range-thumb { background: var(--accent-2); }
+        #s-complex::-moz-range-thumb { background: var(--accent-3); }
+
+        .results-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin: 28px 4px 12px;
+        }
+        .results-head h2 {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        .results-head .count {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .track-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .track {
+            background: var(--surface);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            transition: transform 0.15s, background 0.15s;
+            border: 1px solid var(--border);
+        }
+        .track:hover, .track:active {
+            background: var(--surface-2);
+            transform: translateY(-1px);
+        }
+        .track-rank {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--muted);
+            min-width: 22px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .track-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            background: var(--surface-2);
+            flex-shrink: 0;
+        }
+        .track-meta {
+            flex: 1;
+            min-width: 0;
+        }
+        .track-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .track-sub {
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .track-match {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(255,217,61,0.12);
+            color: var(--accent-2);
+            flex-shrink: 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 11px;
+            color: #555;
+        }
+        footer a {
+            color: var(--muted);
+            text-decoration: none;
+            border-bottom: 1px dotted #444;
+        }
+
+        @media (max-width: 380px) {
+            header h1 { font-size: 24px; }
+            .mood-card { padding: 20px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>Mood Music</h1>
+            <p>지금 듣고 싶은 분위기를 슬라이더로 표현하세요</p>
+        </header>
+
+        <div class="mood-card">
+            <div class="mood-summary" id="mood-summary">
+                <span class="accent">슬라이더를 움직여보세요</span>
+            </div>
+
+            <div class="slider-row">
+                <div class="slider-head">
+                    <span class="slider-icon">☀️</span>
+                    <span>밝기</span>
+                </div>
+                <input type="range" id="s-bright" min="0" max="100" value="50">
+                <div class="slider-ends">
+                    <span>어두운</span>
+                    <span>밝은</span>
+                </div>
+            </div>
+
+            <div class="slider-row">
+                <div class="slider-head">
+                    <span class="slider-icon">🔥</span>
+                    <span>강렬함</span>
+                </div>
+                <input type="range" id="s-intense" min="0" max="100" value="50">
+                <div class="slider-ends">
+                    <span>잔잔한</span>
+                    <span>강한</span>
+                </div>
+            </div>
+
+            <div class="slider-row">
+                <div class="slider-head">
+                    <span class="slider-icon">🎼</span>
+                    <span>풍성함</span>
+                </div>
+                <input type="range" id="s-complex" min="0" max="100" value="50">
+                <div class="slider-ends">
+                    <span>단순한</span>
+                    <span>풍성한</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-head">
+            <h2>추천곡</h2>
+            <span class="count" id="result-count"></span>
+        </div>
+        <div class="track-list" id="track-list">
+            <div class="loading">곡 데이터를 불러오는 중...</div>
+        </div>
+
+        <footer>
+            <a href="index.html">연구용 3D 탐색 모드로 보기 →</a>
+        </footer>
+    </div>
+
+    <script>
+    const GENRE_EMOJI = {
+        'Blues': '🎷', 'Classical': '🎻', 'Country': '🤠',
+        'Easy Listening': '☕', 'Electronic': '🎛️', 'Experimental': '🌀',
+        'Folk': '🪕', 'Hip-Hop': '🎤', 'Instrumental': '🎹',
+        'International': '🌏', 'Jazz': '🎺', 'Old-Time / Historic': '📻',
+        'Pop': '✨', 'Rock': '🎸', 'Soul-RnB': '💜', 'Spoken': '🗣️'
+    };
+
+    const GENRE_KO = {
+        'Blues': '블루스', 'Classical': '클래식', 'Country': '컨트리',
+        'Easy Listening': '이지 리스닝', 'Electronic': '일렉트로닉',
+        'Experimental': '실험음악', 'Folk': '포크', 'Hip-Hop': '힙합',
+        'Instrumental': '연주곡', 'International': '월드뮤직', 'Jazz': '재즈',
+        'Old-Time / Historic': '올드타임', 'Pop': '팝', 'Rock': '록',
+        'Soul-RnB': '소울/R&B', 'Spoken': '스포큰'
+    };
+
+    const TOP_K = 8;
+    let DATA = null;
+
+    async function loadData() {
+        const resp = await fetch('music_data.json');
+        DATA = await resp.json();
+        update();
+    }
+
+    function moodText(b, i, c) {
+        const parts = [];
+        if (b < 35) parts.push('어둡고');
+        else if (b > 65) parts.push('밝고');
+        if (i < 35) parts.push('잔잔한');
+        else if (i > 65) parts.push('강렬한');
+        else parts.push('적당한');
+        if (c < 35) parts.push('단순한');
+        else if (c > 65) parts.push('풍성한');
+
+        if (parts.length === 1 && parts[0] === '적당한') return '편안하고 무난한 곡';
+        return parts.join(' ') + ' 곡';
+    }
+
+    function findNearest(x, y, z, k) {
+        const out = new Array(DATA.tracks.length);
+        for (let i = 0; i < DATA.tracks.length; i++) {
+            const t = DATA.tracks[i];
+            const dx = t.x - x, dy = t.y - y, dz = t.z - z;
+            out[i] = { t, d: dx*dx + dy*dy + dz*dz };
+        }
+        out.sort((a, b) => a.d - b.d);
+        return out.slice(0, k);
+    }
+
+    function matchPct(distSq) {
+        const d = Math.sqrt(distSq);
+        return Math.max(0, Math.round(100 - d * 1.8));
+    }
+
+    function update() {
+        if (!DATA) return;
+        const b = +document.getElementById('s-bright').value;
+        const i = +document.getElementById('s-intense').value;
+        const c = +document.getElementById('s-complex').value;
+
+        document.getElementById('mood-summary').innerHTML =
+            '<span class="accent">' + moodText(b, i, c) + '</span>';
+
+        const nearest = findNearest(b, i, c, TOP_K);
+        const listEl = document.getElementById('track-list');
+
+        listEl.innerHTML = nearest.map((r, idx) => {
+            const t = r.t;
+            const emoji = GENRE_EMOJI[t.genre] || '🎵';
+            const genreKo = GENRE_KO[t.genre] || t.genre;
+            const match = matchPct(r.d);
+            return `
+                <div class="track">
+                    <div class="track-rank">${idx + 1}</div>
+                    <div class="track-icon">${emoji}</div>
+                    <div class="track-meta">
+                        <div class="track-title">Track #${t.id}</div>
+                        <div class="track-sub">${genreKo}</div>
+                    </div>
+                    <div class="track-match">${match}% 매치</div>
+                </div>
+            `;
+        }).join('');
+
+        document.getElementById('result-count').textContent =
+            `Top ${TOP_K} · 총 ${DATA.stats.total_tracks.toLocaleString()}곡 중`;
+    }
+
+    let raf = null;
+    function scheduleUpdate() {
+        if (raf) return;
+        raf = requestAnimationFrame(() => { raf = null; update(); });
+    }
+
+    ['s-bright', 's-intense', 's-complex'].forEach(id => {
+        document.getElementById(id).addEventListener('input', scheduleUpdate);
+    });
+
+    loadData();
+    </script>
+</body>
+</html>
