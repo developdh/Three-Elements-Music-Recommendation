@@ -126,9 +126,14 @@ k=2가 너무 단순할 수 있으므로, k=2~10까지 늘려가며 장르 대�
 
 ### Web Prototype: 3D Music Explorer
 
-> **Live Demo**: https://developdh.github.io/Three-Elements-Music-Recommendation/
+> **Live Demo (연구용)**: https://developdh.github.io/Three-Elements-Music-Recommendation/
+> **Live Demo (서비스용)**: https://developdh.github.io/Three-Elements-Music-Recommendation/app.html
 
 연구 결과를 바탕으로 구현한 인터랙티브 웹 프로토타입. 49,598곡이 3D 공간에 매핑되어 있으며, 사용자가 3개 슬라이더로 탐색할 수 있다.
+
+두 가지 모드가 있다:
+- **연구용 (`index.html`)** — 3D 산점도 + 장르 색상 + 분포 히스토그램. 데이터 구조와 축의 의미를 시각적으로 검증하는 용도
+- **서비스용 (`app.html`)** — 슬라이더와 추천곡 카드만 노출. 일반 사용자가 기분으로 음악을 찾는 데 최적화된 미니멀 UI (모바일 친화적, 한국어 라벨, 매치율 % 표시)
 
 **핵심 기술:**
 - **Quantile Normalization**: 각 축의 곡 분포를 균일하게 변환하여, 슬라이더를 어디로 움직이든 항상 같은 밀도의 곡이 주변에 존재 (구간별 표준편차 = 1)
@@ -243,7 +248,8 @@ Three-Elements-Music-Recommendation/
 │   ├── visualization.py       # 시각화 모듈
 │   └── evaluation.py          # k-NN 평가 모듈
 ├── web/
-│   ├── index.html             # 3D Music Explorer 웹 프로토타입
+│   ├── index.html             # 3D Music Explorer (연구용 3D 시각화)
+│   ├── app.html               # Mood Music (서비스용 간소화 UI)
 │   └── music_data.json        # PCA 좌표 + 메타데이터 (3.4MB)
 ├── docs/
 │   └── proposal.md            # 서비스 프로포절
