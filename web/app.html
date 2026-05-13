@@ -67,6 +67,36 @@
             color: var(--accent-2);
         }
 
+        .presets {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            margin: 0 -4px 22px;
+            padding: 2px 4px;
+            scrollbar-width: none;
+        }
+        .presets::-webkit-scrollbar { display: none; }
+        .preset {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s, border-color 0.15s, transform 0.1s;
+            font-family: inherit;
+        }
+        .preset:hover { background: #2d2d3c; }
+        .preset:active { transform: scale(0.96); }
+        .preset.active {
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+            color: #1a1a1a;
+            border-color: transparent;
+        }
+
         .slider-row {
             margin-bottom: 18px;
         }
@@ -239,7 +269,16 @@
 
         <div class="mood-card">
             <div class="mood-summary" id="mood-summary">
-                <span class="accent">슬라이더를 움직여보세요</span>
+                <span class="accent">상황을 선택하거나 슬라이더를 움직여보세요</span>
+            </div>
+
+            <div class="presets" id="presets">
+                <button class="preset" data-b="20" data-i="20" data-c="35">🌙 잠들기 전</button>
+                <button class="preset" data-b="45" data-i="30" data-c="55">📚 집중</button>
+                <button class="preset" data-b="55" data-i="30" data-c="60">☕ 카페</button>
+                <button class="preset" data-b="80" data-i="80" data-c="40">💪 운동</button>
+                <button class="preset" data-b="85" data-i="85" data-c="45">🎉 파티</button>
+                <button class="preset" data-b="35" data-i="25" data-c="70">🌧️ 비 오는 날</button>
             </div>
 
             <div class="slider-row">
@@ -390,7 +429,21 @@
     }
 
     ['s-bright', 's-intense', 's-complex'].forEach(id => {
-        document.getElementById(id).addEventListener('input', scheduleUpdate);
+        document.getElementById(id).addEventListener('input', () => {
+            document.querySelectorAll('.preset.active').forEach(p => p.classList.remove('active'));
+            scheduleUpdate();
+        });
+    });
+
+    document.querySelectorAll('.preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('s-bright').value = btn.dataset.b;
+            document.getElementById('s-intense').value = btn.dataset.i;
+            document.getElementById('s-complex').value = btn.dataset.c;
+            document.querySelectorAll('.preset.active').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            scheduleUpdate();
+        });
     });
 
     loadData();
